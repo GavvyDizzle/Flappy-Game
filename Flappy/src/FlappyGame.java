@@ -7,17 +7,19 @@ import javax.swing.*;
 
 public class FlappyGame extends JComponent implements ActionListener, KeyListener {
 	
-	private static Pipe[] arr = new Pipe[20];
+	private static Pipe[] arr = new Pipe[2];
 	private static boolean[] bool = new boolean[20];
-	private int scrollSpeed = 5;
+	private int scrollSpeed = 0;
 	private int birdX = 150;
 	private int birdY = 290;
 	private double birdYSpeed = 0;
-	private double gravity = 3.2;
+	private double gravity = 3;
 	private double jumpHeight = 17;
 	private int pipeWidth = 50;
 	private int score = 0;
 	boolean isGameOver = false;
+	boolean isGameWin = false;
+	boolean gameStart = false;
 	
 	
 	public static void main(String[] args) 
@@ -32,10 +34,9 @@ public class FlappyGame extends JComponent implements ActionListener, KeyListene
 		
 		Timer t = new Timer(10, game);
 		t.start();
+		window.addKeyListener(game);
 		
 		createPipes();
-		
-		window.addKeyListener(game);
 	}
 	
 	public Dimension getPreferredSize()
@@ -46,44 +47,65 @@ public class FlappyGame extends JComponent implements ActionListener, KeyListene
 	@Override
 	protected void paintComponent(Graphics g) 
 	{
-		g.setColor(Color.ORANGE);
+		g.setColor(new Color(100, 255, 255)); //draw bg
+		g.fillRect(0, 0, 600, 600);
+		
+		g.setColor(new Color(76, 153, 0)); //draw bg
+		g.fillRect(0, 551, 600, 49);
+		g.setColor(Color.BLACK);
+		g.fillRect(0, 550, 600, 2);
+		
+		
+		g.setColor(Color.ORANGE); //draw bird
 		g.fillOval(birdX, birdY, 20, 20);
 		g.setColor(Color.BLACK);
 		g.drawOval(birdX, birdY, 20, 20);
 		
-		for (int i = 0; i < arr.length; i++) {
+		for (int i = 0; i < arr.length; i++) { //draw pipes
 		g.setColor(Color.GREEN);
 		g.fillRect(arr[i].getPipeX(), 0, pipeWidth, arr[i].getTop());
 		g.setColor(Color.BLACK);
-		g.drawRect(arr[i].getPipeX(), -1, pipeWidth, arr[i].getTop()); //top pipe
+		g.drawRect(arr[i].getPipeX(), -1, pipeWidth, arr[i].getTop() + 1); //top pipe
 		g.setColor(Color.GREEN);
-		g.fillRect(arr[i].getPipeX(), arr[i].getBottom(), pipeWidth, 600 - arr[i].getBottom());
+		g.fillRect(arr[i].getPipeX(), arr[i].getBottom() + 1, pipeWidth, 600 - arr[i].getBottom());
 		g.setColor(Color.BLACK);
-		g.drawRect(arr[i].getPipeX(), arr[i].getBottom() + 1, pipeWidth, 600 - arr[i].getBottom());//bottom pipe
+		g.drawRect(arr[i].getPipeX(), arr[i].getBottom() + 1, pipeWidth, 600 - arr[i].getBottom());
 		}
-		
-		g.setColor(Color.BLACK);
-		g.setFont(new Font("sansserif", Font.BOLD, 14));
-		g.drawString("Score: " + score, 5, 15);
-		
 
 		if(isGameOver) {
 			g.setFont(new Font("sansserif", Font.BOLD, 42));
 			g.setColor(new Color( (int) (Math.random() * 255), (int) (Math.random() * 255), (int) (Math.random() * 255) ));
 			g.drawString("GAM OVER", 200, 300);
-			
+		}
+		
+		if(isGameWin && !isGameOver) {
+			g.setFont(new Font("sansserif", Font.BOLD, 42));
+			g.setColor(new Color( (int) (Math.random() * 255), (int) (Math.random() * 255), (int) (Math.random() * 255) ));
+			g.drawString("YOU WIN", 200, 300);
+		}
+		
+		if(!gameStart) {
+			g.setFont(new Font("sansserif", Font.BOLD, 30));
+			g.setColor(Color.BLACK);
+			g.drawString("Press the up arrow to begin", 100, 50);		
+		}
+		else {
+			g.setColor(Color.BLACK);
+			g.setFont(new Font("sansserif", Font.BOLD, 20));
+			g.drawString(Integer.toString(score), 295, 20);
 		}
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) //executes every frame
 	{	
-		birdY += birdYSpeed + gravity;
+		if (gameStart)
+			birdY += birdYSpeed + gravity;
 		
 		for (int i = 0; i < arr.length; i++) {
 			arr[i].setPipeX(scrollSpeed); //+ score * 0.25);
 			
-			if (arr[i].getPipeX() < birdX && !bool[i]) {
+			if (arr[i].getPipeX() + pipeWidth < birdX + 20 && !bool[i]) {
 				score++;
 				bool[i] = true;
 			}
@@ -112,13 +134,17 @@ public class FlappyGame extends JComponent implements ActionListener, KeyListene
 		for (int i = 0; i < arr.length; i++) {
 			
 			if ( birdX + 20 > arr[i].getPipeX() && birdX < arr[i].getPipeX() + pipeWidth &&
-				( birdY < arr[i].getTop() || birdY > arr[i].getTop() + Pipe.empty ))
+				( birdY < arr[i].getTop() || birdY + 20 > arr[i].getTop() + Pipe.empty ))
 			{
 				scrollSpeed = 0;
 				isGameOver = true;
 				gravity = 0;
 			}
 				
+		}
+		
+		if (score == arr.length && birdX > arr[arr.length - 1].getPipeX() + 20) {
+			isGameWin = true;
 		}
 		
 		
@@ -133,9 +159,21 @@ public class FlappyGame extends JComponent implements ActionListener, KeyListene
 
 	@Override
 	public void keyPressed(KeyEvent e) {
-		if(!isGameOver) {
-		if (e.getKeyCode() == KeyEvent.VK_UP)
+		if(!isGameOver && e.getKeyCode() == KeyEvent.VK_UP) {
 			birdYSpeed = -jumpHeight;
+			gameStart = true;
+			scrollSpeed = 5;
+		}
+		else if ( (isGameOver || isGameWin) && e.getKeyCode() == KeyEvent.VK_R) {
+			createPipes();
+			isGameOver = false;
+			isGameWin = false;
+			gameStart = false;
+			scrollSpeed = 0;
+			birdY = 290;
+			score = 0;
+			for (int i = 0; i < bool.length; i++)
+				bool[i] = false;
 		}
 	}
 
